@@ -1,81 +1,213 @@
-import subprocess
+"""
+=== ANTI GPU SPIN - VERSÃO 2.0 ===
+PROMPT DE MANUTENÇÃO:
+"Esse código resolve o problema de GPU que fica maluca após 23 minutos de inatividade.
+Ele move o mouse e faz double click automaticamente para controlar a fan da placa de vídeo.
+Sempre que enviar este código, você deve analisar e melhorar mantendo a funcionalidade principal."
+
+FUNCIONALIDADES:
+- Detecta inatividade do mouse por 2 minutos (120 segundos)  
+- Executa múltiplas ações: double click, movimentos, scroll, teclas
+- Previne que a GPU entre em modo problemático
+- Interface melhorada com status em tempo real
+- Failsafe para emergência (mover mouse para canto superior esquerdo)
+
+PRÓXIMOS PASSOS/MELHORIAS FUTURAS:
+- Adicionar logs em arquivo
+- Interface gráfica simples
+- Configurações personalizáveis via arquivo
+- Detecção de jogos/aplicações em tela cheia
+"""
+
+import pyautogui
 import time
-import re
+import random
+import os
+from datetime import datetime
 
-print("CONTROLE DE CURVA DA VENTOINHA GPU")
-print("Baseado no gráfico fornecido")
-print("Pressione Ctrl+C para parar")
+# ========================================
+# CONFIGURAÇÕES PRINCIPAIS
+# ========================================
+VERSAO = "2.0"
+TEMPO_INATIVIDADE_MAX = 120  # 2 minutos em segundos  
+INTERVALO_CHECK = 1  # Verifica a cada 1 segundo
+TOLERANCIA_MOVIMENTO = 5  # Pixels de tolerância para detectar movimento
 
-def get_gpu_temp():
-    """Pega a temperatura da GPU usando nvidia-smi"""
+# Configurações do PyAutoGUI
+pyautogui.FAILSAFE = True  # Emergência: mover mouse para canto superior esquerdo
+pyautogui.PAUSE = 0.05     # Pausa menor entre ações para mais fluidez
+
+# ========================================
+# FUNÇÕES AUXILIARES  
+# ========================================
+def limpar_tela():
+    """Limpa a tela do terminal"""
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def log_acao(mensagem):
+    """Registra ação com timestamp"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] {mensagem}")
+
+def detectar_movimento(pos1, pos2, tolerancia=TOLERANCIA_MOVIMENTO):
+    """Detecta se houve movimento significativo do mouse"""
+    distancia = ((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2) ** 0.5
+    return distancia > tolerancia
+
+def fazer_atividade_anti_spin():
+    """
+    FUNÇÃO PRINCIPAL: Executa sequência de ações para manter GPU ativa
+    Esta função resolve o problema da placa de vídeo que fica maluca
+    """
+    log_acao("🎯 INICIANDO SEQUÊNCIA ANTI-SPIN...")
+    
+    # Salva posição inicial para retornar depois
+    pos_inicial = pyautogui.position()
+    
     try:
-        result = subprocess.run(['nvidia-smi', '--query-gpu=temperature.gpu', '--format=csv,noheader,nounits'], 
-                              capture_output=True, text=True)
-        if result.returncode == 0:
-            temp = int(result.stdout.strip())
-            return temp
-        else:
-            return None
-    except:
-        return None
-
-def calculate_fan_speed(temp):
-    """Calcula a velocidade da ventoinha baseado na temperatura"""
-    # Curva modificada: 0% até 50°C, depois cresce até 100% aos 80°C
-    if temp < 50:
-        return 0  # Ventoinha desligada
-    elif temp >= 80:
-        return 100  # Velocidade máxima
-    else:
-        # Interpolação linear entre 50°C (0%) e 80°C (100%)
-        # Fórmula: y = mx + b
-        # m = (100-0)/(80-50) = 100/30 = 3.33
-        # b = 0 - 3.33*50 = -166.67
-        fan_speed = 3.33 * temp - 166.67
-        return min(100, max(0, int(fan_speed)))
-
-def set_fan_speed(speed):
-    """Define a velocidade da ventoinha (requer MSI Afterburner ou similar)"""
-    try:
-        # Exemplo usando MSI Afterburner command line
-        # Você pode precisar ajustar o caminho
-        subprocess.run([
-            'MSIAfterburner.exe', 
-            '-Profile1', 
-            f'-FanSpeed={speed}'
-        ], capture_output=True)
-        return True
-    except:
-        return False
-
-# Loop principal
-while True:
-    try:
-        # Pega temperatura atual
-        temp = get_gpu_temp()
+        # 1. Double Click - Principal ação para controlar fan da GPU
+        log_acao("   ✓ Executando double click (controle da fan)")
+        pyautogui.doubleClick()
+        time.sleep(0.3)
         
-        if temp is not None:
-            # Calcula velocidade da ventoinha
-            fan_speed = calculate_fan_speed(temp)
-            
-            # Mostra informações
-            print(f"Temp: {temp}°C | Ventoinha: {fan_speed}%")
-            
-            # Define velocidade (descomente se tiver MSI Afterburner)
-            # set_fan_speed(fan_speed)
-            
-        else:
-            print("Erro ao ler temperatura da GPU")
+        # 2. Movimento circular suave - Simula atividade natural
+        log_acao("   ✓ Movimento circular suave")
+        raio = 15
+        for i in range(12):  # Movimento mais suave com mais pontos
+            angulo = (i * 30) * (3.14159 / 180)  # Converte para radianos
+            x_offset = int(raio * pyautogui.math.cos(angulo)) if hasattr(pyautogui, 'math') else int(raio * 0.5)
+            y_offset = int(raio * pyautogui.math.sin(angulo)) if hasattr(pyautogui, 'math') else int(raio * 0.5)
+            pyautogui.moveTo(pos_inicial.x + x_offset, pos_inicial.y + y_offset, duration=0.05)
         
-        # Espera 5 segundos antes da próxima leitura
-        time.sleep(5)
+        # Volta para posição inicial
+        pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.1)
+        time.sleep(0.2)
         
-    except KeyboardInterrupt:
-        print("\nPARADO!")
-        break
+        # 3. Scroll vertical - Atividade adicional
+        log_acao("   ✓ Scroll vertical aleatório")
+        scroll_amount = random.choice([2, -2, 3, -3, 1, -1])
+        pyautogui.scroll(scroll_amount)
+        time.sleep(0.2)
+        
+        # 4. Pressionar tecla neutra (Shift) - Não interfere em aplicações
+        log_acao("   ✓ Tecla neutra (Shift)")
+        pyautogui.press('shift')
+        time.sleep(0.2)
+        
+        # 5. Movimento final aleatório pequeno
+        log_acao("   ✓ Movimento final aleatório")
+        for _ in range(2):
+            dx = random.randint(-10, 10)
+            dy = random.randint(-10, 10)
+            pyautogui.move(dx, dy, duration=0.1)
+            time.sleep(0.1)
+        
+        # Retorna para posição inicial
+        pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.15)
+        
+        log_acao("   ✅ SEQUÊNCIA ANTI-SPIN CONCLUÍDA COM SUCESSO!")
+        
     except Exception as e:
-        print(f"ERRO: {e}")
-        time.sleep(5)
+        log_acao(f"   ❌ ERRO durante atividade anti-spin: {e}")
+        # Tenta retornar para posição inicial mesmo com erro
+        try:
+            pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.1)
+        except:
+            pass
 
-print("FIM!")
-input("Enter para fechar")
+def mostrar_status(tempo_inativo, ultima_acao="Nenhuma"):
+    """Mostra status atual do programa"""
+    tempo_restante = TEMPO_INATIVIDADE_MAX - tempo_inativo
+    porcentagem = (tempo_inativo / TEMPO_INATIVIDADE_MAX) * 100
+    
+    # Barra de progresso visual
+    barra_tamanho = 20
+    barra_preenchida = int((porcentagem / 100) * barra_tamanho)
+    barra = "█" * barra_preenchida + "░" * (barra_tamanho - barra_preenchida)
+    
+    print(f"\r⏱️  Inativo: {tempo_inativo:3d}s | Restante: {tempo_restante:3d}s | [{barra}] {porcentagem:5.1f}% | Última: {ultima_acao}", end="", flush=True)
+
+# ========================================
+# PROGRAMA PRINCIPAL
+# ========================================
+def main():
+    limpar_tela()
+    print("=" * 50)
+    print(f"    ANTI GPU SPIN - VERSÃO {VERSAO}")
+    print("=" * 50)
+    print("🎯 OBJETIVO: Prevenir GPU maluca após inatividade")
+    print("⏰ TEMPO: Ação a cada 2 minutos de inatividade")
+    print("🛑 PARAR: Ctrl+C ou mover mouse para canto superior esquerdo")
+    print("=" * 50)
+    
+    # Variáveis de controle
+    ultima_posicao = pyautogui.position()
+    tempo_inativo = 0
+    contador_acoes = 0
+    ultima_acao_executada = "Início do programa"
+    
+    log_acao("🚀 PROGRAMA INICIADO - Monitorando atividade...")
+    
+    try:
+        while True:
+            time.sleep(INTERVALO_CHECK)
+            posicao_atual = pyautogui.position()
+            
+            # Verifica se houve movimento significativo
+            if detectar_movimento(posicao_atual, ultima_posicao):
+                if tempo_inativo > 10:  # Só mostra se estava inativo por um tempo
+                    print()  # Nova linha após a barra de status
+                    log_acao("🟢 Movimento detectado! Resetando contador de inatividade")
+                
+                tempo_inativo = 0
+                ultima_posicao = posicao_atual
+                ultima_acao_executada = "Movimento do mouse"
+                
+            else:
+                # Incrementa tempo de inatividade
+                tempo_inativo += INTERVALO_CHECK
+                
+                # Mostra status em tempo real (sobrescreve a linha)
+                if tempo_inativo >= 10:  # Só mostra status após 10 segundos
+                    mostrar_status(tempo_inativo, ultima_acao_executada)
+                
+                # Executa ação anti-spin após tempo limite
+                if tempo_inativo >= TEMPO_INATIVIDADE_MAX:
+                    print()  # Nova linha após a barra de status
+                    contador_acoes += 1
+                    
+                    log_acao(f"🔥 ATIVANDO ANTI-SPIN (Execução #{contador_acoes})")
+                    fazer_atividade_anti_spin()
+                    
+                    # Reset do contador
+                    tempo_inativo = 0
+                    ultima_posicao = pyautogui.position()
+                    ultima_acao_executada = f"Anti-spin #{contador_acoes}"
+                    
+                    print("-" * 50)
+                
+    except KeyboardInterrupt:
+        print("\n" + "=" * 50)
+        log_acao("🛑 PROGRAMA INTERROMPIDO PELO USUÁRIO (Ctrl+C)")
+        log_acao(f"📊 ESTATÍSTICAS: {contador_acoes} ações anti-spin executadas")
+        
+    except pyautogui.FailSafeException:
+        print("\n" + "=" * 50)
+        log_acao("🛑 FAILSAFE ATIVADO! Mouse movido para canto superior esquerdo")
+        log_acao("ℹ️  Esta é uma medida de segurança para parar o programa")
+        
+    except Exception as e:
+        print("\n" + "=" * 50)
+        log_acao(f"❌ ERRO INESPERADO: {e}")
+        log_acao("🔧 Verifique se PyAutoGUI está funcionando corretamente")
+        
+    finally:
+        print("=" * 50)
+        log_acao("📋 PROGRAMA FINALIZADO")
+        input("\n💡 Pressione Enter para fechar a janela...")
+
+# ========================================
+# EXECUÇÃO
+# ========================================
+if __name__ == "__main__":
+    main()
