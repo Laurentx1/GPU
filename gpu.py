@@ -1,7 +1,7 @@
 """
 === ANTI GPU SPIN - VERSÃO 2.0 ===
 PROMPT DE MANUTENÇÃO:
-"Esse código resolve o problema de GPU que fica maluca após 23 minutos de inatividade.
+"Esse código resolve o problema de GPU que fica maluca após 3 minutos de inatividade.
 Ele move o mouse e faz double click automaticamente para controlar a fan da placa de vídeo.
 Sempre que enviar este código, você deve analisar e melhorar mantendo a funcionalidade principal."
 
