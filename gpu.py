@@ -1,9 +1,9 @@
 """
-=== ANTI GPU SPIN - VERSÃO 2.0 ===
+=== ANTI GPU SPIN - VERSÃO 2.0 CORRIGIDA ===
 PROMPT DE MANUTENÇÃO:
-"Esse código resolve o problema de GPU que fica maluca após 3 minutos de inatividade.
+"Esse código resolve o problema de GPU que fica maluca após 2 minutos de inatividade.
 Ele move o mouse e faz double click automaticamente para controlar a fan da placa de vídeo.
-Sempre que enviar este código, você deve analisar e melhorar mantendo a funcionalidade principal."
+FUNCIONAMENTO: Só executa ações A CADA 2 MINUTOS quando você não mexe o mouse."
 
 FUNCIONALIDADES:
 - Detecta inatividade do mouse por 2 minutos (120 segundos)  
@@ -11,6 +11,7 @@ FUNCIONALIDADES:
 - Previne que a GPU entre em modo problemático
 - Interface melhorada com status em tempo real
 - Failsafe para emergência (mover mouse para canto superior esquerdo)
+- CORRIGIDO: Execução única por ciclo
 
 PRÓXIMOS PASSOS/MELHORIAS FUTURAS:
 - Adicionar logs em arquivo
@@ -23,12 +24,13 @@ import pyautogui
 import time
 import random
 import os
+import math
 from datetime import datetime
 
 # ========================================
 # CONFIGURAÇÕES PRINCIPAIS
 # ========================================
-VERSAO = "2.0"
+VERSAO = "2.0 - CORRIGIDA"
 TEMPO_INATIVIDADE_MAX = 120  # 2 minutos em segundos  
 INTERVALO_CHECK = 1  # Verifica a cada 1 segundo
 TOLERANCIA_MOVIMENTO = 5  # Pixels de tolerância para detectar movimento
@@ -74,9 +76,9 @@ def fazer_atividade_anti_spin():
         log_acao("   ✓ Movimento circular suave")
         raio = 15
         for i in range(12):  # Movimento mais suave com mais pontos
-            angulo = (i * 30) * (3.14159 / 180)  # Converte para radianos
-            x_offset = int(raio * pyautogui.math.cos(angulo)) if hasattr(pyautogui, 'math') else int(raio * 0.5)
-            y_offset = int(raio * pyautogui.math.sin(angulo)) if hasattr(pyautogui, 'math') else int(raio * 0.5)
+            angulo = (i * 30) * (math.pi / 180)  # Converte para radianos
+            x_offset = int(raio * math.cos(angulo))
+            y_offset = int(raio * math.sin(angulo))
             pyautogui.moveTo(pos_inicial.x + x_offset, pos_inicial.y + y_offset, duration=0.05)
         
         # Volta para posição inicial
@@ -117,8 +119,8 @@ def fazer_atividade_anti_spin():
 
 def mostrar_status(tempo_inativo, ultima_acao="Nenhuma"):
     """Mostra status atual do programa"""
-    tempo_restante = TEMPO_INATIVIDADE_MAX - tempo_inativo
-    porcentagem = (tempo_inativo / TEMPO_INATIVIDADE_MAX) * 100
+    tempo_restante = max(0, TEMPO_INATIVIDADE_MAX - tempo_inativo)
+    porcentagem = min(100, (tempo_inativo / TEMPO_INATIVIDADE_MAX) * 100)
     
     # Barra de progresso visual
     barra_tamanho = 20
@@ -136,8 +138,9 @@ def main():
     print(f"    ANTI GPU SPIN - VERSÃO {VERSAO}")
     print("=" * 50)
     print("🎯 OBJETIVO: Prevenir GPU maluca após inatividade")
-    print("⏰ TEMPO: Ação a cada 2 minutos de inatividade")
+    print("⏰ TEMPO: Ação A CADA 2 minutos (só quando inativo)")
     print("🛑 PARAR: Ctrl+C ou mover mouse para canto superior esquerdo")
+    print("🔧 FUNCIONAMENTO: Mantém GPU ativa a cada 2 min SEM movimento")
     print("=" * 50)
     
     # Variáveis de controle
@@ -159,31 +162,33 @@ def main():
                     print()  # Nova linha após a barra de status
                     log_acao("🟢 Movimento detectado! Resetando contador de inatividade")
                 
+                # Reset quando há movimento
                 tempo_inativo = 0
                 ultima_posicao = posicao_atual
                 ultima_acao_executada = "Movimento do mouse"
                 
             else:
-                # Incrementa tempo de inatividade
+                # Sempre incrementa tempo de inatividade quando não há movimento
                 tempo_inativo += INTERVALO_CHECK
                 
                 # Mostra status em tempo real (sobrescreve a linha)
-                if tempo_inativo >= 10:  # Só mostra status após 10 segundos
+                if tempo_inativo >= 10:
                     mostrar_status(tempo_inativo, ultima_acao_executada)
                 
-                # Executa ação anti-spin após tempo limite
+                # Executa ação anti-spin A CADA 2 minutos de inatividade
                 if tempo_inativo >= TEMPO_INATIVIDADE_MAX:
                     print()  # Nova linha após a barra de status
                     contador_acoes += 1
                     
-                    log_acao(f"🔥 ATIVANDO ANTI-SPIN (Execução #{contador_acoes})")
+                    log_acao(f"🔥 ATIVANDO ANTI-SPIN (Execução #{contador_acoes}) - GPU estava inativa por 2min")
                     fazer_atividade_anti_spin()
                     
-                    # Reset do contador
+                    # Reset do contador para próximos 2 minutos
                     tempo_inativo = 0
-                    ultima_posicao = pyautogui.position()
+                    ultima_posicao = pyautogui.position()  # Atualiza posição após as ações
                     ultima_acao_executada = f"Anti-spin #{contador_acoes}"
                     
+                    log_acao("✅ Reiniciando contagem - próxima ação em 2 minutos se continuar inativo")
                     print("-" * 50)
                 
     except KeyboardInterrupt:
