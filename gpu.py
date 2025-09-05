@@ -1,11 +1,9 @@
 """
-=== ANTI GPU SPIN - VERSÃO 3.0 TOTALMENTE CORRIGIDA ===
-CORREÇÕES PRINCIPAIS:
-- Detecção de movimento mais precisa
-- Sistema de timing mais confiável
-- Melhor tratamento de erros
-- Interface mais clara
-- Ações mais efetivas para manter GPU ativa
+=== ANTI GPU SPIN - VERSÃO 3.1 MOVIMENTO SIMPLES ===
+MODIFICAÇÕES:
+- Apenas movimento do mouse (sem clicks ou teclas)
+- Movimento suave e discreto
+- Mantém a lógica original de detecção
 """
 
 import pyautogui
@@ -19,7 +17,7 @@ import sys
 # ========================================
 # CONFIGURAÇÕES PRINCIPAIS
 # ========================================
-VERSAO = "3.0 - TOTALMENTE CORRIGIDA"
+VERSAO = "3.1 - MOVIMENTO SIMPLES"
 TEMPO_INATIVIDADE_MAX = 120  # 2 minutos em segundos  
 INTERVALO_CHECK = 0.5  # Verifica a cada 0.5 segundos (mais responsivo)
 TOLERANCIA_MOVIMENTO = 3  # Pixels de tolerância (mais sensível)
@@ -60,14 +58,14 @@ def calcular_distancia(pos1, pos2):
         return float('inf')
     return ((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2) ** 0.5
 
-def executar_acao_anti_spin():
+def executar_movimento_simples():
     """
-    FUNÇÃO PRINCIPAL MELHORADA: Executa ações mais efetivas
+    FUNÇÃO SIMPLIFICADA: Apenas movimento do mouse
     """
     global contador_execucoes
     contador_execucoes += 1
     
-    log_acao(f"🎯 EXECUTANDO ANTI-SPIN #{contador_execucoes}")
+    log_acao(f"🎯 EXECUTANDO MOVIMENTO SIMPLES #{contador_execucoes}")
     
     # Salva posição inicial
     pos_inicial = obter_posicao_mouse_segura()
@@ -76,66 +74,34 @@ def executar_acao_anti_spin():
         return False
     
     try:
-        # 1. DOUBLE CLICK mais efetivo
-        log_acao("   → Double click para ativar GPU")
-        pyautogui.doubleClick(interval=0.1)
+        # Movimento simples e suave
+        log_acao("   → Movimento suave do mouse")
+        
+        # Define um pequeno deslocamento aleatório
+        deslocamento_x = random.randint(-15, 15)
+        deslocamento_y = random.randint(-15, 15)
+        
+        # Calcula nova posição dentro dos limites da tela
+        screen_width, screen_height = pyautogui.size()
+        nova_x = max(10, min(screen_width - 10, pos_inicial.x + deslocamento_x))
+        nova_y = max(10, min(screen_height - 10, pos_inicial.y + deslocamento_y))
+        
+        # Move para a nova posição suavemente
+        pyautogui.moveTo(nova_x, nova_y, duration=0.5)
         time.sleep(0.2)
         
-        # 2. MOVIMENTO EM PADRÃO MAIS COMPLEXO
-        log_acao("   → Movimento em padrão complexo")
-        # Movimento em quadrado
-        moves = [
-            (20, 0), (0, 20), (-20, 0), (0, -20),  # Quadrado
-            (10, 10), (-10, -10), (10, -10), (-10, 10)  # Diagonais
-        ]
+        # Retorna para a posição original suavemente
+        pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.5)
         
-        for dx, dy in moves:
-            nova_x = pos_inicial.x + dx
-            nova_y = pos_inicial.y + dy
-            pyautogui.moveTo(nova_x, nova_y, duration=0.05)
-            time.sleep(0.02)
-        
-        # Volta para posição inicial
-        pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.1)
-        time.sleep(0.1)
-        
-        # 3. MÚLTIPLOS SCROLLS
-        log_acao("   → Scrolls múltiplos")
-        for _ in range(3):
-            scroll_amount = random.choice([2, -2, 3, -3])
-            pyautogui.scroll(scroll_amount)
-            time.sleep(0.1)
-        
-        # 4. COMBINAÇÃO DE TECLAS SEGURAS
-        log_acao("   → Teclas de controle")
-        teclas_seguras = ['shift', 'ctrl', 'alt']
-        for tecla in random.sample(teclas_seguras, 2):
-            pyautogui.press(tecla)
-            time.sleep(0.1)
-        
-        # 5. CLIQUES ADICIONAIS EM POSIÇÕES ALEATÓRIAS
-        log_acao("   → Cliques adicionais")
-        for _ in range(2):
-            offset_x = random.randint(-30, 30)
-            offset_y = random.randint(-30, 30)
-            click_x = max(10, min(pyautogui.size().width - 10, pos_inicial.x + offset_x))
-            click_y = max(10, min(pyautogui.size().height - 10, pos_inicial.y + offset_y))
-            
-            pyautogui.click(click_x, click_y)
-            time.sleep(0.1)
-        
-        # Retorna para posição inicial final
-        pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.2)
-        
-        log_acao("   ✅ ANTI-SPIN EXECUTADO COM SUCESSO!")
+        log_acao(f"   ✅ MOVIMENTO CONCLUÍDO! Deslocamento: ({deslocamento_x}, {deslocamento_y})")
         return True
         
     except Exception as e:
-        log_acao(f"   ❌ ERRO durante anti-spin: {e}")
+        log_acao(f"   ❌ ERRO durante movimento: {e}")
         # Tenta retornar para posição inicial
         try:
             if pos_inicial:
-                pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.1)
+                pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.3)
         except:
             pass
         return False
@@ -158,7 +124,7 @@ def mostrar_status_melhorado(tempo_inativo):
     
     barra = char_barra * barra_preenchida + "░" * (barra_tamanho - barra_preenchida)
     
-    status = f"\r⏱️ Inativo: {tempo_inativo:3.1f}s | Restante: {tempo_restante:3.1f}s | [{barra}] {porcentagem:5.1f}% | Exec: {contador_execucoes}"
+    status = f"\r⏱️ Inativo: {tempo_inativo:3.1f}s | Restante: {tempo_restante:3.1f}s | [{barra}] {porcentagem:5.1f}% | Movim: {contador_execucoes}"
     print(status, end="", flush=True)
 
 def monitor_inatividade():
@@ -206,20 +172,20 @@ def monitor_inatividade():
                     if tempo_inativo_atual >= 5:
                         mostrar_status_melhorado(tempo_inativo_atual)
                     
-                    # EXECUTA ANTI-SPIN se atingiu o limite
+                    # EXECUTA MOVIMENTO SIMPLES se atingiu o limite
                     if tempo_inativo_atual >= TEMPO_INATIVIDADE_MAX:
                         print()  # Nova linha
                         log_acao(f"🔥 LIMITE ATINGIDO! {tempo_inativo_atual:.1f}s de inatividade")
                         
-                        if executar_acao_anti_spin():
+                        if executar_movimento_simples():
                             # Reset após execução bem-sucedida
                             ultima_posicao_mouse = obter_posicao_mouse_segura()
                             tempo_inicio_inatividade = time.time()
                             
-                            log_acao("✅ Reiniciando contagem - próxima verificação em 2min")
+                            log_acao("✅ Reiniciando contagem - próximo movimento em 2min")
                             print("-" * 60)
                         else:
-                            log_acao("❌ Falha na execução - tentando novamente em 30s")
+                            log_acao("❌ Falha no movimento - tentando novamente em 30s")
                             time.sleep(30)
                             
         except KeyboardInterrupt:
@@ -242,8 +208,8 @@ def main():
     print(f"         ANTI GPU SPIN - VERSÃO {VERSAO}")
     print("=" * 60)
     print("🎯 OBJETIVO: Prevenir GPU de entrar em modo problemático")
-    print("⏰ AÇÃO: A cada 2 minutos de inatividade do mouse")
-    print("🔧 MELHORIAS: Detecção mais precisa + ações mais efetivas")
+    print("⏰ AÇÃO: Movimento simples do mouse a cada 2 minutos de inatividade")
+    print("🖱️ COMPORTAMENTO: Apenas move o mouse suavemente (sem clicks)")
     print("🛑 PARAR: Ctrl+C ou mover mouse para canto superior esquerdo")
     print("📊 TOLERÂNCIA: Movimento mínimo de 3 pixels para detectar atividade")
     print("=" * 60)
@@ -284,7 +250,7 @@ def main():
     finally:
         programa_rodando = False
         print("=" * 60)
-        log_acao(f"📊 ESTATÍSTICAS FINAIS: {contador_execucoes} execuções anti-spin realizadas")
+        log_acao(f"📊 ESTATÍSTICAS FINAIS: {contador_execucoes} movimentos realizados")
         log_acao("📋 PROGRAMA FINALIZADO")
         
         # Pausa para ver o resultado
