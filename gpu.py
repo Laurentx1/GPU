@@ -219,11 +219,12 @@ def main():
     print("=" * 70)
     print(f"        ANTI GPU SPIN - {VERSAO}")
     print("=" * 70)
-    print("🎯 FUNÇÃO: Previne GPU de entrar em modo economia problemático")
-    print("🖱️ MÉTODO: Move o mouse suavemente após 2 minutos SEM movimento")
-    print("⏰ TIMING: Monitora REAL inatividade - não há execução desnecessária")
+    print("🎯 FUNÇÃO: Simula atividade para CPU parar ventiladores")
+    print("🖱️ MÉTODO: Movimento AMPLO em cruz (esquerda→direita→cima→baixo)")
+    print("⚡ EFEITO: Sistema detecta atividade real e para fans da CPU")
+    print("🔄 SEQUÊNCIA: Movimentos grandes + retorna posição original")
     print("🛑 PARAR: Ctrl+C ou mover mouse para canto superior esquerdo")
-    print(f"📏 SENSIBILIDADE: {TOLERANCIA_MOVIMENTO}px = movimento mínimo detectável")
+    print(f"📏 DETECÇÃO: {TOLERANCIA_MOVIMENTO}px = seu movimento para cancelar")
     print("=" * 70)
     
     try:
