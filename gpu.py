@@ -1,9 +1,10 @@
 """
-=== ANTI GPU SPIN - VERSÃO 3.1 MOVIMENTO SIMPLES ===
-MODIFICAÇÕES:
-- Apenas movimento do mouse (sem clicks ou teclas)
-- Movimento suave e discreto
-- Mantém a lógica original de detecção
+=== ANTI GPU SPIN - VERSÃO 3.2 CORRIGIDA ===
+CORREÇÕES PRINCIPAIS:
+- Corrigido problema de detecção de movimento
+- Melhorado sistema de logging
+- Otimizada performance e responsividade
+- Adicionado modo debug para troubleshooting
 """
 
 import pyautogui
@@ -13,179 +14,252 @@ import os
 import threading
 from datetime import datetime
 import sys
+import traceback
 
 # ========================================
 # CONFIGURAÇÕES PRINCIPAIS
 # ========================================
-VERSAO = "3.1 - MOVIMENTO SIMPLES"
+VERSAO = "3.2 - CORRIGIDA"
 TEMPO_INATIVIDADE_MAX = 120  # 2 minutos em segundos  
-INTERVALO_CHECK = 0.5  # Verifica a cada 0.5 segundos (mais responsivo)
-TOLERANCIA_MOVIMENTO = 3  # Pixels de tolerância (mais sensível)
+INTERVALO_CHECK = 1.0  # Verifica a cada 1 segundo (mais estável)
+TOLERANCIA_MOVIMENTO = 5  # Pixels de tolerância (ajustado)
+DEBUG_MODE = True  # Ativa logs detalhados
 
 # Configurações do PyAutoGUI
 pyautogui.FAILSAFE = True
-pyautogui.PAUSE = 0.01  # Pausa mínima entre ações
+pyautogui.PAUSE = 0.1  # Pausa entre ações
 
 # Variáveis globais para controle
 programa_rodando = True
 ultima_posicao_mouse = None
 tempo_inicio_inatividade = None
 contador_execucoes = 0
+lock = threading.Lock()  # Para thread safety
 
 # ========================================
 # FUNÇÕES AUXILIARES MELHORADAS
 # ========================================
 def limpar_tela():
     """Limpa a tela do terminal"""
-    os.system('cls' if os.name == 'nt' else 'clear')
+    try:
+        os.system('cls' if os.name == 'nt' else 'clear')
+    except:
+        pass
+
+def debug_log(mensagem):
+    """Log apenas em modo debug"""
+    if DEBUG_MODE:
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        print(f"[DEBUG {timestamp}] {mensagem}")
 
 def log_acao(mensagem):
-    """Registra ação com timestamp melhorado"""
-    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]  # Com milissegundos
+    """Registra ação com timestamp"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
     print(f"[{timestamp}] {mensagem}")
 
 def obter_posicao_mouse_segura():
-    """Obtém posição do mouse com tratamento de erro"""
+    """Obtém posição do mouse com tratamento robusto de erro"""
     try:
-        return pyautogui.position()
+        pos = pyautogui.position()
+        debug_log(f"Posição obtida: ({pos.x}, {pos.y})")
+        return pos
     except Exception as e:
-        log_acao(f"⚠️ Erro ao obter posição do mouse: {e}")
+        debug_log(f"Erro ao obter posição: {e}")
         return None
 
 def calcular_distancia(pos1, pos2):
-    """Calcula distância entre duas posições"""
+    """Calcula distância euclidiana entre duas posições"""
     if pos1 is None or pos2 is None:
         return float('inf')
-    return ((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2) ** 0.5
+    
+    dist = ((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2) ** 0.5
+    debug_log(f"Distância calculada: {dist:.2f}px entre ({pos1.x},{pos1.y}) e ({pos2.x},{pos2.y})")
+    return dist
 
 def executar_movimento_simples():
     """
-    FUNÇÃO SIMPLIFICADA: Apenas movimento do mouse
+    FUNÇÃO PRINCIPAL: Executa movimento suave do mouse
     """
     global contador_execucoes
-    contador_execucoes += 1
     
-    log_acao(f"🎯 EXECUTANDO MOVIMENTO SIMPLES #{contador_execucoes}")
+    with lock:
+        contador_execucoes += 1
+        exec_num = contador_execucoes
     
-    # Salva posição inicial
-    pos_inicial = obter_posicao_mouse_segura()
-    if pos_inicial is None:
-        log_acao("❌ Não foi possível obter posição inicial")
-        return False
+    log_acao(f"🎯 EXECUTANDO MOVIMENTO #{exec_num}")
     
     try:
-        # Movimento simples e suave
-        log_acao("   → Movimento suave do mouse")
+        # Obtém posição inicial
+        pos_inicial = obter_posicao_mouse_segura()
+        if pos_inicial is None:
+            log_acao("❌ Falha ao obter posição inicial")
+            return False
         
-        # Define um pequeno deslocamento aleatório
-        deslocamento_x = random.randint(-15, 15)
-        deslocamento_y = random.randint(-15, 15)
+        # Obtém dimensões da tela
+        try:
+            screen_width, screen_height = pyautogui.size()
+            debug_log(f"Dimensões da tela: {screen_width}x{screen_height}")
+        except Exception as e:
+            log_acao(f"❌ Erro ao obter dimensões da tela: {e}")
+            return False
         
-        # Calcula nova posição dentro dos limites da tela
-        screen_width, screen_height = pyautogui.size()
-        nova_x = max(10, min(screen_width - 10, pos_inicial.x + deslocamento_x))
-        nova_y = max(10, min(screen_height - 10, pos_inicial.y + deslocamento_y))
+        # Calcula movimento pequeno e seguro
+        margem = 50  # Margem de segurança das bordas
+        max_deslocamento = 20  # Movimento máximo
         
-        # Move para a nova posição suavemente
-        pyautogui.moveTo(nova_x, nova_y, duration=0.5)
-        time.sleep(0.2)
+        # Gera deslocamento aleatório
+        dx = random.randint(-max_deslocamento, max_deslocamento)
+        dy = random.randint(-max_deslocamento, max_deslocamento)
         
-        # Retorna para a posição original suavemente
-        pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.5)
+        # Calcula nova posição com limites seguros
+        nova_x = max(margem, min(screen_width - margem, pos_inicial.x + dx))
+        nova_y = max(margem, min(screen_height - margem, pos_inicial.y + dy))
         
-        log_acao(f"   ✅ MOVIMENTO CONCLUÍDO! Deslocamento: ({deslocamento_x}, {deslocamento_y})")
+        log_acao(f"   → Movendo de ({pos_inicial.x},{pos_inicial.y}) para ({nova_x},{nova_y})")
+        
+        # Executa movimento suave
+        pyautogui.moveTo(nova_x, nova_y, duration=0.8, tween=pyautogui.easeInOutQuad)
+        time.sleep(0.5)  # Pausa no destino
+        
+        # Retorna suavemente para posição original
+        pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.8, tween=pyautogui.easeInOutQuad)
+        
+        log_acao(f"   ✅ MOVIMENTO CONCLUÍDO! Deslocamento: ({dx}, {dy})")
         return True
         
+    except pyautogui.FailSafeException:
+        log_acao("🛑 FAILSAFE ativado durante movimento")
+        return False
     except Exception as e:
-        log_acao(f"   ❌ ERRO durante movimento: {e}")
-        # Tenta retornar para posição inicial
-        try:
-            if pos_inicial:
-                pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=0.3)
-        except:
-            pass
+        log_acao(f"❌ ERRO no movimento: {e}")
+        debug_log(f"Stack trace: {traceback.format_exc()}")
         return False
 
-def mostrar_status_melhorado(tempo_inativo):
-    """Interface de status melhorada"""
+def mostrar_status(tempo_inativo):
+    """Mostra status de forma mais limpa"""
     tempo_restante = max(0, TEMPO_INATIVIDADE_MAX - tempo_inativo)
     porcentagem = min(100, (tempo_inativo / TEMPO_INATIVIDADE_MAX) * 100)
     
-    # Barra de progresso colorida (usando caracteres especiais)
-    barra_tamanho = 30
-    barra_preenchida = int((porcentagem / 100) * barra_tamanho)
+    # Barra de progresso simples
+    barra_tamanho = 20
+    preenchido = int((porcentagem / 100) * barra_tamanho)
+    barra = "█" * preenchido + "░" * (barra_tamanho - preenchido)
     
-    if porcentagem < 50:
-        char_barra = "▓"  # Verde (início)
-    elif porcentagem < 80:
-        char_barra = "▒"  # Amarelo (meio)
-    else:
-        char_barra = "█"  # Vermelho (quase executando)
-    
-    barra = char_barra * barra_preenchida + "░" * (barra_tamanho - barra_preenchida)
-    
-    status = f"\r⏱️ Inativo: {tempo_inativo:3.1f}s | Restante: {tempo_restante:3.1f}s | [{barra}] {porcentagem:5.1f}% | Movim: {contador_execucoes}"
+    status = f"\r⏱️ Inativo: {tempo_inativo:6.1f}s | Restam: {tempo_restante:6.1f}s | [{barra}] {porcentagem:5.1f}% | Movs: {contador_execucoes}"
     print(status, end="", flush=True)
 
+def verificar_sistema():
+    """Verifica se o sistema está funcionando corretamente"""
+    log_acao("🔧 VERIFICANDO SISTEMA...")
+    
+    try:
+        # Testa posição do mouse
+        pos = obter_posicao_mouse_segura()
+        if pos is None:
+            raise Exception("Não consegue obter posição do mouse")
+        log_acao(f"✅ Mouse detectado em: ({pos.x}, {pos.y})")
+        
+        # Testa dimensões da tela
+        w, h = pyautogui.size()
+        log_acao(f"✅ Tela detectada: {w}x{h} pixels")
+        
+        # Testa pequeno movimento
+        log_acao("🔧 Testando movimento...")
+        original_x, original_y = pos.x, pos.y
+        pyautogui.moveTo(original_x + 1, original_y + 1, duration=0.1)
+        time.sleep(0.1)
+        pyautogui.moveTo(original_x, original_y, duration=0.1)
+        log_acao("✅ Movimento testado com sucesso")
+        
+        return True
+        
+    except Exception as e:
+        log_acao(f"❌ FALHA na verificação: {e}")
+        return False
+
 def monitor_inatividade():
-    """Thread principal para monitorar inatividade"""
+    """Thread principal de monitoramento - VERSÃO CORRIGIDA"""
     global ultima_posicao_mouse, tempo_inicio_inatividade, programa_rodando
     
-    log_acao("🚀 INICIANDO MONITORAMENTO DE INATIVIDADE...")
+    log_acao("🚀 INICIANDO MONITORAMENTO...")
     
-    # Inicializa posição
-    ultima_posicao_mouse = obter_posicao_mouse_segura()
-    tempo_inicio_inatividade = time.time()
+    # Inicialização robusta
+    try:
+        posicao_inicial = obter_posicao_mouse_segura()
+        if posicao_inicial is None:
+            log_acao("❌ Falha na inicialização - não consegue ler posição do mouse")
+            return
+        
+        ultima_posicao_mouse = posicao_inicial
+        tempo_inicio_inatividade = time.time()
+        
+        log_acao(f"✅ Monitoramento iniciado. Posição inicial: ({posicao_inicial.x}, {posicao_inicial.y})")
+        
+    except Exception as e:
+        log_acao(f"❌ ERRO na inicialização: {e}")
+        return
     
+    ultima_exibicao_status = 0
+    
+    # Loop principal de monitoramento
     while programa_rodando:
         try:
-            # Pequena pausa para não sobrecarregar CPU
             time.sleep(INTERVALO_CHECK)
             
+            # Obtém posição atual
             posicao_atual = obter_posicao_mouse_segura()
             if posicao_atual is None:
+                debug_log("Falha ao obter posição atual, pulando ciclo")
                 continue
             
-            # Calcula distância do movimento
-            distancia = calcular_distancia(posicao_atual, ultima_posicao_mouse)
             tempo_atual = time.time()
+            
+            # Calcula distância do último movimento
+            distancia = calcular_distancia(posicao_atual, ultima_posicao_mouse)
             
             # Verifica se houve movimento significativo
             if distancia > TOLERANCIA_MOVIMENTO:
-                # MOVIMENTO DETECTADO - Reset
-                if tempo_inicio_inatividade is not None:
-                    tempo_inativo_atual = tempo_atual - tempo_inicio_inatividade
-                    if tempo_inativo_atual > 10:  # Só mostra se estava inativo por mais de 10s
-                        print()  # Nova linha
-                        log_acao(f"🟢 MOVIMENTO DETECTADO! (dist: {distancia:.1f}px) - Reset após {tempo_inativo_atual:.1f}s")
+                # MOVIMENTO DETECTADO
+                tempo_inativo_anterior = tempo_atual - tempo_inicio_inatividade if tempo_inicio_inatividade else 0
                 
-                # Reset das variáveis
-                ultima_posicao_mouse = posicao_atual
-                tempo_inicio_inatividade = tempo_atual
+                if tempo_inativo_anterior > 10:  # Só reporta se estava inativo por um tempo
+                    print()  # Nova linha para limpar status
+                    log_acao(f"🟢 MOVIMENTO DETECTADO! Distância: {distancia:.1f}px - Reset após {tempo_inativo_anterior:.1f}s")
+                
+                # Reset completo
+                with lock:
+                    ultima_posicao_mouse = posicao_atual
+                    tempo_inicio_inatividade = tempo_atual
+                
+                debug_log(f"Reset: nova posição ({posicao_atual.x}, {posicao_atual.y})")
                 
             else:
-                # SEM MOVIMENTO - Verifica tempo de inatividade
+                # SEM MOVIMENTO SIGNIFICATIVO
                 if tempo_inicio_inatividade is not None:
-                    tempo_inativo_atual = tempo_atual - tempo_inicio_inatividade
+                    tempo_inativo = tempo_atual - tempo_inicio_inatividade
                     
-                    # Mostra status se inativo por mais de 5 segundos
-                    if tempo_inativo_atual >= 5:
-                        mostrar_status_melhorado(tempo_inativo_atual)
+                    # Mostra status a cada 2 segundos se inativo por mais de 10s
+                    if tempo_inativo >= 10 and (tempo_atual - ultima_exibicao_status) >= 2:
+                        mostrar_status(tempo_inativo)
+                        ultima_exibicao_status = tempo_atual
                     
-                    # EXECUTA MOVIMENTO SIMPLES se atingiu o limite
-                    if tempo_inativo_atual >= TEMPO_INATIVIDADE_MAX:
+                    # EXECUTA AÇÃO se atingiu limite
+                    if tempo_inativo >= TEMPO_INATIVIDADE_MAX:
                         print()  # Nova linha
-                        log_acao(f"🔥 LIMITE ATINGIDO! {tempo_inativo_atual:.1f}s de inatividade")
+                        log_acao(f"🔥 LIMITE DE INATIVIDADE ATINGIDO! {tempo_inativo:.1f}s")
                         
-                        if executar_movimento_simples():
-                            # Reset após execução bem-sucedida
-                            ultima_posicao_mouse = obter_posicao_mouse_segura()
-                            tempo_inicio_inatividade = time.time()
+                        sucesso = executar_movimento_simples()
+                        
+                        if sucesso:
+                            # Reset após execução
+                            with lock:
+                                ultima_posicao_mouse = obter_posicao_mouse_segura()
+                                tempo_inicio_inatividade = time.time()
                             
-                            log_acao("✅ Reiniciando contagem - próximo movimento em 2min")
-                            print("-" * 60)
+                            log_acao("✅ Reset completo - próxima verificação em 2 minutos")
+                            print("-" * 70)
                         else:
-                            log_acao("❌ Falha no movimento - tentando novamente em 30s")
+                            log_acao("❌ Movimento falhou - tentativa em 30 segundos")
                             time.sleep(30)
                             
         except KeyboardInterrupt:
@@ -193,84 +267,85 @@ def monitor_inatividade():
             break
         except pyautogui.FailSafeException:
             programa_rodando = False
-            log_acao("🛑 FAILSAFE ATIVADO!")
+            log_acao("🛑 FAILSAFE ATIVADO! Mouse no canto superior esquerdo")
             break
         except Exception as e:
-            log_acao(f"⚠️ Erro no monitoramento: {e}")
-            time.sleep(1)  # Pausa antes de tentar novamente
+            log_acao(f"⚠️ ERRO no monitoramento: {e}")
+            debug_log(f"Stack trace: {traceback.format_exc()}")
+            time.sleep(5)  # Pausa maior em caso de erro
 
 def main():
-    """Função principal melhorada"""
+    """Função principal CORRIGIDA"""
     global programa_rodando
     
     limpar_tela()
-    print("=" * 60)
+    print("=" * 70)
     print(f"         ANTI GPU SPIN - VERSÃO {VERSAO}")
-    print("=" * 60)
-    print("🎯 OBJETIVO: Prevenir GPU de entrar em modo problemático")
-    print("⏰ AÇÃO: Movimento simples do mouse a cada 2 minutos de inatividade")
-    print("🖱️ COMPORTAMENTO: Apenas move o mouse suavemente (sem clicks)")
+    print("=" * 70)
+    print("🎯 OBJETIVO: Prevenir GPU de entrar em modo de economia problemático")
+    print("⏰ FUNCIONAMENTO: Move mouse suavemente a cada 2min de inatividade")
+    print("🖱️ AÇÃO: Apenas movimento suave (ida e volta)")
     print("🛑 PARAR: Ctrl+C ou mover mouse para canto superior esquerdo")
-    print("📊 TOLERÂNCIA: Movimento mínimo de 3 pixels para detectar atividade")
-    print("=" * 60)
+    print(f"📊 SENSIBILIDADE: {TOLERANCIA_MOVIMENTO}px mínimo para detectar movimento")
+    print("=" * 70)
     
     try:
-        # Testa se PyAutoGUI está funcionando
-        pos_teste = obter_posicao_mouse_segura()
-        if pos_teste is None:
-            raise Exception("PyAutoGUI não está funcionando corretamente")
+        # Verificação inicial do sistema
+        if not verificar_sistema():
+            raise Exception("Verificação do sistema falhou")
         
-        log_acao(f"✅ Sistema inicializado - Posição inicial: ({pos_teste.x}, {pos_teste.y})")
-        log_acao("🔍 Iniciando monitoramento...")
+        log_acao("🔍 Sistema verificado - iniciando monitoramento...")
         
         # Inicia thread de monitoramento
         thread_monitor = threading.Thread(target=monitor_inatividade, daemon=True)
         thread_monitor.start()
         
-        # Loop principal (para capturar Ctrl+C)
-        while programa_rodando:
+        log_acao("✅ Thread de monitoramento iniciada")
+        log_acao("💡 Deixe o mouse parado por 2 minutos para testar...")
+        
+        # Loop principal para capturar interrupções
+        while programa_rodando and thread_monitor.is_alive():
             time.sleep(1)
             
     except KeyboardInterrupt:
         programa_rodando = False
-        print("\n" + "=" * 60)
-        log_acao("🛑 PROGRAMA INTERROMPIDO PELO USUÁRIO (Ctrl+C)")
+        print("\n" + "=" * 70)
+        log_acao("🛑 INTERRUPÇÃO DO USUÁRIO (Ctrl+C)")
         
     except pyautogui.FailSafeException:
         programa_rodando = False
-        print("\n" + "=" * 60)
-        log_acao("🛑 FAILSAFE ATIVADO! Mouse no canto superior esquerdo")
+        print("\n" + "=" * 70)
+        log_acao("🛑 FAILSAFE ATIVADO!")
         
     except Exception as e:
         programa_rodando = False
-        print("\n" + "=" * 60)
+        print("\n" + "=" * 70)
         log_acao(f"❌ ERRO CRÍTICO: {e}")
-        log_acao("💡 Verifique se o PyAutoGUI está instalado: pip install pyautogui")
+        if DEBUG_MODE:
+            debug_log(f"Stack trace completo:\n{traceback.format_exc()}")
         
     finally:
         programa_rodando = False
-        print("=" * 60)
-        log_acao(f"📊 ESTATÍSTICAS FINAIS: {contador_execucoes} movimentos realizados")
+        print("=" * 70)
+        log_acao(f"📊 RELATÓRIO FINAL: {contador_execucoes} movimentos executados")
         log_acao("📋 PROGRAMA FINALIZADO")
         
-        # Pausa para ver o resultado
         try:
             input("\n💡 Pressione Enter para fechar...")
         except:
-            pass
+            time.sleep(2)
 
 # ========================================
-# EXECUÇÃO
+# EXECUÇÃO PRINCIPAL
 # ========================================
 if __name__ == "__main__":
-    # Verificação de dependências
     try:
         import pyautogui
-        print("✅ PyAutoGUI encontrado")
+        print("✅ PyAutoGUI carregado com sucesso")
     except ImportError:
-        print("❌ PyAutoGUI não encontrado!")
+        print("❌ ERRO: PyAutoGUI não encontrado!")
         print("💡 Instale com: pip install pyautogui")
-        input("Pressione Enter para continuar...")
+        input("Pressione Enter para sair...")
         sys.exit(1)
     
     main()
