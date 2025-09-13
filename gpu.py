@@ -1,10 +1,10 @@
 """
-=== ANTI GPU SPIN - VERSÃO 3.3 TIMING CORRIGIDO ===
-CORREÇÃO CRÍTICA:
-- Corrigida lógica de temporização
-- Agora monitora REAL tempo de inatividade
-- Executa ação apenas quando realmente necessário
-- Sistema de timing mais preciso
+=== ANTI GPU SPIN - VERSÃO 3.4 CLIQUE + MOVIMENTO ===
+NOVA FUNCIONALIDADE:
+- Agora executa CLIQUE antes do movimento
+- Sequência: Clique → Movimento → Retorna posição
+- Garante detecção máxima de atividade pelo sistema
+- Timing corrigido da versão 3.3 mantido
 """
 
 import pyautogui
@@ -18,7 +18,7 @@ import sys
 # ========================================
 # CONFIGURAÇÕES PRINCIPAIS
 # ========================================
-VERSAO = "3.3 - TIMING CORRIGIDO"
+VERSAO = "3.4 - CLIQUE + MOVIMENTO"
 TEMPO_INATIVIDADE_MAX = 120  # 2 minutos = 120 segundos
 INTERVALO_CHECK = 2.0  # Verifica a cada 2 segundos
 TOLERANCIA_MOVIMENTO = 3  # Pixels mínimos para considerar movimento
@@ -57,14 +57,14 @@ def calcular_distancia(pos1, pos2):
     return ((pos1.x - pos2.x) ** 2 + (pos1.y - pos2.y) ** 2) ** 0.5
 
 def executar_movimento_preventivo():
-    """Executa o movimento preventivo"""
+    """Executa o movimento preventivo com clique inicial"""
     global contador_movimentos
     
     with lock:
         contador_movimentos += 1
         num_movimento = contador_movimentos
     
-    log_com_tempo(f"🎯 EXECUTANDO MOVIMENTO PREVENTIVO #{num_movimento}")
+    log_com_tempo(f"🎯 EXECUTANDO AÇÃO PREVENTIVA #{num_movimento}")
     
     try:
         # Salva posição atual
@@ -72,6 +72,16 @@ def executar_movimento_preventivo():
         if not pos_inicial:
             log_com_tempo("❌ Erro: não conseguiu obter posição inicial")
             return False
+        
+        log_com_tempo(f"   → Posição inicial: ({pos_inicial.x},{pos_inicial.y})")
+        
+        # 🖱️ PASSO 1: EXECUTA CLIQUE
+        log_com_tempo("   → PASSO 1: Executando clique...")
+        pyautogui.click()
+        time.sleep(0.5)  # Pausa após clique
+        
+        # 🔄 PASSO 2: MOVIMENTO
+        log_com_tempo("   → PASSO 2: Executando movimento...")
         
         # Calcula movimento pequeno e seguro
         screen_w, screen_h = pyautogui.size()
@@ -85,20 +95,21 @@ def executar_movimento_preventivo():
         nova_x = max(margem, min(screen_w - margem, pos_inicial.x + offset_x))
         nova_y = max(margem, min(screen_h - margem, pos_inicial.y + offset_y))
         
-        log_com_tempo(f"   → Movimento: ({pos_inicial.x},{pos_inicial.y}) -> ({nova_x},{nova_y})")
+        log_com_tempo(f"      Movimento: ({pos_inicial.x},{pos_inicial.y}) -> ({nova_x},{nova_y})")
         
         # Move suavemente para nova posição
         pyautogui.moveTo(nova_x, nova_y, duration=1.0)
         time.sleep(0.5)
         
-        # Retorna para posição original
+        # 🔙 PASSO 3: RETORNA À POSIÇÃO ORIGINAL
+        log_com_tempo("   → PASSO 3: Retornando à posição original...")
         pyautogui.moveTo(pos_inicial.x, pos_inicial.y, duration=1.0)
         
-        log_com_tempo(f"   ✅ MOVIMENTO CONCLUÍDO! Offset aplicado: ({offset_x}, {offset_y})")
+        log_com_tempo(f"   ✅ AÇÃO CONCLUÍDA! Clique + Movimento ({offset_x}, {offset_y}) + Retorno")
         return True
         
     except Exception as e:
-        log_com_tempo(f"   ❌ ERRO durante movimento: {e}")
+        log_com_tempo(f"   ❌ ERRO durante ação: {e}")
         return False
 
 def mostrar_status_inatividade(segundos_inativos):
@@ -119,7 +130,7 @@ def mostrar_status_inatividade(segundos_inativos):
     
     status = (f"\r⏰ Inativo: {min_inativos:02d}:{seg_inativos:02d} | "
               f"Restam: {min_restantes:02d}:{seg_restantes:02d} | "
-              f"[{barra}] {porcentagem:5.1f}% | Movimentos: {contador_movimentos}")
+              f"[{barra}] {porcentagem:5.1f}% | Ações: {contador_movimentos}")
     
     print(status, end="", flush=True)
 
@@ -190,17 +201,17 @@ def thread_monitoramento():
                     seg_inativo = int(tempo_inativo % 60)
                     log_com_tempo(f"🔥 LIMITE ATINGIDO! Mouse inativo por {min_inativo:02d}:{seg_inativo:02d}")
                     
-                    # Executa movimento
+                    # Executa clique + movimento
                     sucesso = executar_movimento_preventivo()
                     
                     if sucesso:
-                        # RESET após movimento bem-sucedido
+                        # RESET após ação bem-sucedida
                         posicao_anterior = obter_posicao_mouse()
                         timestamp_ultima_atividade = time.time()
-                        log_com_tempo("✅ Timer resetado - próximo movimento em 2 minutos")
+                        log_com_tempo("✅ Timer resetado - próxima ação em 2 minutos")
                         print("-" * 70)
                     else:
-                        log_com_tempo("❌ Movimento falhou - tentativa em 30s")
+                        log_com_tempo("❌ Ação falhou - tentativa em 30s")
                         time.sleep(30)
                         
         except KeyboardInterrupt:
@@ -220,9 +231,9 @@ def main():
     print(f"        ANTI GPU SPIN - {VERSAO}")
     print("=" * 70)
     print("🎯 FUNÇÃO: Simula atividade para CPU parar ventiladores")
-    print("🖱️ MÉTODO: Movimento AMPLO em cruz (esquerda→direita→cima→baixo)")
-    print("⚡ EFEITO: Sistema detecta atividade real e para fans da CPU")
-    print("🔄 SEQUÊNCIA: Movimentos grandes + retorna posição original")
+    print("🖱️ MÉTODO: CLIQUE + Movimento + Retorna posição original")
+    print("⚡ EFEITO: Dupla detecção de atividade (clique + movimento)")
+    print("🔄 SEQUÊNCIA: Clique → Move → Retorna → Reset timer (1min 30s)")
     print("🛑 PARAR: Ctrl+C ou mover mouse para canto superior esquerdo")
     print(f"📏 DETECÇÃO: {TOLERANCIA_MOVIMENTO}px = seu movimento para cancelar")
     print("=" * 70)
@@ -241,6 +252,7 @@ def main():
         thread_monitor.start()
         
         log_com_tempo("🎮 TESTE: Deixe o mouse parado por exatos 2 minutos para verificar!")
+        log_com_tempo("🖱️ NOVO: Agora executa CLIQUE antes do movimento para máxima detecção!")
         
         # Loop principal
         while programa_rodando and thread_monitor.is_alive():
@@ -264,7 +276,7 @@ def main():
     finally:
         programa_rodando = False
         print("=" * 70)
-        log_com_tempo(f"📊 TOTAL DE MOVIMENTOS EXECUTADOS: {contador_movimentos}")
+        log_com_tempo(f"📊 TOTAL DE AÇÕES EXECUTADAS: {contador_movimentos}")
         log_com_tempo("👋 Programa finalizado")
         
         try:
